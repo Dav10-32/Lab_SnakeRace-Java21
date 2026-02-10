@@ -77,6 +77,40 @@ co.eci.snake
   - Posibles **condiciones de carrera**.
   - **Colecciones** o estructuras **no seguras** en contexto concurrente.
   - Ocurrencias de **espera activa** (busy-wait) o de sincronización innecesaria.
+## Parte II — Análisis de concurrencia (SnakeRace)
+
+### Uso de hilos y autonomía de las serpientes
+
+El sistema utiliza concurrencia asignando **un hilo independiente por cada serpiente**, implementado mediante la clase `SnakeRunner`, la cual implementa `Runnable`. Cada instancia de `SnakeRunner` se ejecuta en su propio hilo y controla de forma autónoma el movimiento, los giros aleatorios y la velocidad de su respectiva serpiente. Esto permite que múltiples serpientes se muevan simultáneamente sobre el mismo tablero sin depender de un ciclo centralizado.
+
+El uso de un `Executor` con hilos virtuales permite escalar el número de serpientes manteniendo una ejecución eficiente y desacoplada.
+
+---
+
+### Posibles condiciones de carrera
+
+Existen **potenciales condiciones de carrera** debido al acceso concurrente a objetos compartidos:
+
+- **Objeto Board**: es compartido por todos los hilos `SnakeRunner`. Las operaciones que modifican su estado (`step`) están protegidas con `synchronized`, lo cual evita condiciones de carrera sobre las colecciones internas (ratones, obstáculos, turbo y teleports).
+- **Objeto Snake**: cada serpiente es accedida por su hilo de ejecución y también por el hilo de la interfaz gráfica (para renderizar el estado). Métodos como `advance()` y `snapshot()` no están sincronizados, lo que podría generar inconsistencias temporales al leer el cuerpo de la serpiente mientras está siendo modificado.
+
+---
+
+### Colecciones o estructuras no seguras en contexto concurrente
+
+Se identifican las siguientes estructuras no thread-safe:
+
+- En `Board`, se utilizan `HashSet` y `HashMap` para almacenar ratones, obstáculos, turbo y teleports. Aunque estas colecciones no son seguras en concurrencia, su acceso está correctamente protegido mediante métodos `synchronized`, lo que evita problemas de concurrencia.
+- En `Snake`, el cuerpo se almacena en un `ArrayDeque`, el cual no es thread-safe. Dado que este objeto es leído desde el hilo de la interfaz gráfica y modificado desde el hilo de ejecución de la serpiente, existe un posible riesgo de condiciones de carrera.
+- La lista `snakes` en `SnakeApp` es un `ArrayList` no sincronizado, pero su contenido no se modifica después de la inicialización, por lo que su uso concurrente es seguro en este contexto.
+
+---
+
+### Espera activa (busy-wait) y sincronización innecesaria
+
+No se observa **busy-waiting** en el sistema. Cada hilo de serpiente controla su ritmo de ejecución mediante `Thread.sleep()`, lo que evita ciclos de espera activa y reduce el consumo innecesario de CPU.
+
+La sincronización utilizada en `Board` es necesaria y está correctamente localizada en las secciones críticas que modifican el estado compartido. No se identifican bloques sincronizados redundantes o innecesarios en el código analizado.
 
 ### 2) Correcciones mínimas y regiones críticas
 
