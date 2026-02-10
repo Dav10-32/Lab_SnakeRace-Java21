@@ -172,7 +172,7 @@ public final class SnakeApp extends JFrame {
 
             System.out.println("Información en momento de pausa: ");
             System.out.println("Longitud serpiente más larga: " + longestAlive.snapshot().size());
-            System.out.println("Longitud serpiente más corta: " + worst.snapshot().size());
+            System.out.println("La peor serpiente: " + worst.snapshot().size());
         }
     }
 

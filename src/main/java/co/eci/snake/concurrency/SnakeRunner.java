@@ -9,15 +9,13 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class SnakeRunner implements Runnable {
   private final Snake snake;
   private final Board board;
-  private final int baseSleepMs = 80;
-  private final int turboSleepMs = 40;
+  private final int baseSleepMs = 40;
+  private final int turboSleepMs = 20;
   private int turboTicks = 0;
 
     private final Object pauseLock = new Object();
     private volatile boolean paused = false;
     private volatile boolean actuallyPaused = false;
-
-
 
     public SnakeRunner(Snake snake, Board board) {
     this.snake = snake;
