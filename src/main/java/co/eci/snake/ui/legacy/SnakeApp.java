@@ -21,8 +21,10 @@ public final class SnakeApp extends JFrame {
   private final JButton actionButton;
   private final GameClock clock;
   private final java.util.List<Snake> snakes = new java.util.ArrayList<>();
+    private final java.util.List<SnakeRunner> runners = new java.util.ArrayList<>();
 
-  public SnakeApp() {
+
+    public SnakeApp() {
     super("The Snake Race");
     this.board = new Board(35, 28);
 
@@ -48,7 +50,11 @@ public final class SnakeApp extends JFrame {
     this.clock = new GameClock(60, () -> SwingUtilities.invokeLater(gamePanel::repaint));
 
     var exec = Executors.newVirtualThreadPerTaskExecutor();
-    snakes.forEach(s -> exec.submit(new SnakeRunner(s, board)));
+    snakes.forEach(s -> {
+        var r = new SnakeRunner(s, board);
+        runners.add(r);
+        exec.submit(r);
+    });
 
     actionButton.addActionListener((ActionEvent e) -> togglePause());
 
@@ -128,17 +134,49 @@ public final class SnakeApp extends JFrame {
     clock.start();
   }
 
-  private void togglePause() {
-    if ("Action".equals(actionButton.getText())) {
-      actionButton.setText("Resume");
-      clock.pause();
-    } else {
-      actionButton.setText("Action");
-      clock.resume();
-    }
-  }
+    private void togglePause() {
+        if ("Action".equals(actionButton.getText())) {
+            actionButton.setText("Resume");
+            clock.pause();
+            runners.forEach(SnakeRunner::pause);
 
-  public static final class GamePanel extends JPanel {
+            boolean allPaused;
+            do {
+                allPaused = runners.stream().allMatch(SnakeRunner::isActuallyPaused);
+                Thread.onSpinWait();
+            } while (!allPaused);
+
+            showPauseStats();
+
+        } else {
+            actionButton.setText("Action");
+            clock.resume();
+            runners.forEach(SnakeRunner::resume);
+        }
+    }
+
+    private void showPauseStats() {
+        synchronized (board) {
+
+            Snake longestAlive = snakes.stream()
+                    .max((a, b) -> Integer.compare(
+                            a.snapshot().size(),
+                            b.snapshot().size()))
+                    .orElse(null);
+
+            Snake worst = snakes.stream()
+                    .min((a, b) -> Integer.compare(
+                            a.snapshot().size(),
+                            b.snapshot().size()))
+                    .orElse(null);
+
+            System.out.println("Información en momento de pausa: ");
+            System.out.println("Longitud serpiente más larga: " + longestAlive.snapshot().size());
+            System.out.println("La peor serpiente: " + worst.snapshot().size());
+        }
+    }
+
+    public static final class GamePanel extends JPanel {
     private final Board board;
     private final Supplier snakesSupplier;
     private final int cell = 20;

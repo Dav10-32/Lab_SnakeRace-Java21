@@ -1,6 +1,9 @@
 # Snake Race — ARSW Lab #2 (Java 21, Virtual Threads)
 
-**Escuela Colombiana de Ingeniería – Arquitecturas de Software**  
+**Escuela Colombiana de Ingeniería – Arquitecturas de Software** 
+
+**Autor: David Santiago Palacios Pinzón**
+
 Laboratorio de programación concurrente: condiciones de carrera, sincronización y colecciones seguras.
 
 ---
@@ -77,6 +80,8 @@ co.eci.snake
   - Posibles **condiciones de carrera**.
   - **Colecciones** o estructuras **no seguras** en contexto concurrente.
   - Ocurrencias de **espera activa** (busy-wait) o de sincronización innecesaria.
+
+**Link repositorio parte 1: [Repositorio](https://github.com/Dav10-32/wait-notify-excercise?classId=d571652c-4593-4217-a1d5-18d74de3a645&assignmentId=5ea1c349-19df-4707-b9c2-0186795f77b2&submissionId=81672244-1198-b543-982d-50938324fe7c)**
 ## Parte II — Análisis de concurrencia (SnakeRace)
 
 ### Uso de hilos y autonomía de las serpientes
@@ -118,6 +123,14 @@ La sincronización utilizada en `Board` es necesaria y está correctamente local
 - Protege **solo** las **regiones críticas estrictamente necesarias** (evita bloqueos amplios).
 - Justifica en **`el reporte de laboratorio`** cada cambio: cuál era el riesgo y cómo lo resuelves.
 
+## Correcciones mínimas y regiones críticas
+
+Se corrigió la ejecución concurrente de las serpientes eliminando la falta de coordinación durante la pausa del juego. Anteriormente, la pausa solo afectaba el renderizado, mientras que los hilos de cada serpiente continuaban ejecutándose. Esto se resolvió mediante un estado de pausa compartido y el uso de `wait()` / `notifyAll()`, evitando ejecución innecesaria y consumo de CPU.
+
+Las regiones críticas se limitaron al acceso a los recursos compartidos del tablero. El método `step()` sincroniza únicamente las estructuras que representan el estado global del juego (ratones, obstáculos, turbo y teletransportes), evitando bloqueos innecesarios sobre la lógica de movimiento.
+
+Con estos cambios se garantiza una pausa real del sistema, correcta sincronización entre hilos y un uso eficiente de los mecanismos de concurrencia de Java.
+
 ### 3) Control de ejecución seguro (UI)
 
 - Implementa la **UI** con **Iniciar / Pausar / Reanudar** (ya existe el botón _Action_ y el reloj `GameClock`).
@@ -125,6 +138,18 @@ La sincronización utilizada en `Board` es necesaria y está correctamente local
   - La **serpiente viva más larga**.
   - La **peor serpiente** (la que **primero murió**).
 - Considera que la suspensión **no es instantánea**; coordina para que el estado mostrado no quede “a medias”.
+
+### Explicación de lo solicitado
+
+La UI implementa los estados Iniciar, Pausar y Reanudar usando el botón Action y el GameClock.
+Al solicitar la pausa, esta no se asume inmediata: primero se envía la señal de pausa a todos
+los SnakeRunner y luego se espera a que cada hilo confirme que está efectivamente detenido.
+
+Solo cuando todos los hilos se encuentran en pausa se toma un snapshot del estado del juego,
+evitando lecturas parciales o inconsistentes (tearing). En este punto se calcula la serpiente
+viva más larga y la peor serpiente, garantizando que la información mostrada corresponde a un
+estado coherente del sistema.
+
 
 ### 4) Robustez bajo carga
 
